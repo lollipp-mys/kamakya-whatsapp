@@ -6,10 +6,27 @@ const app = express();
 app.use(bodyParser.json());
 
 // WhatsApp Cloud API Config
-const token = "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD"; // Replace with your permanent token
-const phone_number_id = "759432643911310"; // Your Phone Number ID
+const token = "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD"; // Replace with permanent token
+const phone_number_id = "759432643911310"; // Your WhatsApp Phone Number ID
+const VERIFY_TOKEN = "kamakya123"; // This must match the token in Meta dashboard
 
-// Endpoint to receive Shopify Webhook
+// ✅ Webhook Verification (Meta requirement)
+app.get("/webhook", (req, res) => {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+
+    if (mode && token) {
+        if (mode === "subscribe" && token === VERIFY_TOKEN) {
+            console.log("✅ Webhook Verified!");
+            return res.status(200).send(challenge);
+        } else {
+            return res.sendStatus(403);
+        }
+    }
+});
+
+// ✅ Handle Shopify Order Webhook → Send WhatsApp message
 app.post("/webhook", async (req, res) => {
     try {
         const order = req.body;
@@ -18,7 +35,7 @@ app.post("/webhook", async (req, res) => {
         const customerName = order.customer?.first_name || "Customer";
         let phone = order.shipping_address?.phone || order.billing_address?.phone;
         if (!phone) {
-            console.log("No phone number found in order");
+            console.log("❌ No phone number found in order");
             return res.sendStatus(200);
         }
 
@@ -47,14 +64,14 @@ app.post("/webhook", async (req, res) => {
         });
 
         const data = await response.json();
-        console.log("WhatsApp API Response:", data);
+        console.log("✅ WhatsApp API Response:", data);
 
         res.sendStatus(200);
     } catch (error) {
-        console.error("Error:", error);
+        console.error("❌ Error:", error);
         res.sendStatus(500);
     }
 });
 
-// Start the server
-app.listen(10000, () => console.log("Server running on port 10000"));
+// ✅ Start the server
+app.listen(10000, () => console.log("🚀 Server running on port 10000"));
