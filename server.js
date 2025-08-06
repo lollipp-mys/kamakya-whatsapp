@@ -6,11 +6,18 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-const WHATSAPP_TOKEN = "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD";
-const PHONE_NUMBER_ID = "759432643911310"; // Replace with your WA business ID
-const INTERNAL_NUMBER = "918147958503"; // Internal team number with country code
+// ✅ WhatsApp API Credentials
+const WHATSAPP_TOKEN =
+  "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD";
+const PHONE_NUMBER_ID = "759432643911310"; // Your WA phone number ID
+const INTERNAL_NUMBER = "918147958503"; // Internal team number
 
-// ✅ Function to send WhatsApp message
+// ✅ WhatsApp Template Details
+const TEMPLATE_NAME = "order_confirmation"; // Approved template name
+const IMAGE_URL =
+  "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo"; // Direct image link
+
+// ✅ Function to send WhatsApp template message
 async function sendWhatsAppMessage(phone, name, orderNumber) {
   const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
 
@@ -19,7 +26,7 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
     to: phone,
     type: "template",
     template: {
-      name: "order_confirmation", // Your approved template
+      name: TEMPLATE_NAME,
       language: { code: "en" },
       components: [
         {
@@ -27,62 +34,93 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
           parameters: [
             {
               type: "image",
-              image: {
-                link: "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo"
-              }
-            }
-          ]
+              image: { link: IMAGE_URL },
+            },
+          ],
         },
         {
           type: "body",
           parameters: [
             { type: "text", text: name },
-            { type: "text", text: `#${orderNumber}` }
-          ]
-        }
-      ]
-    }
+            { type: "text", text: orderNumber },
+          ],
+        },
+      ],
+    },
   };
 
   try {
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     });
-    console.log(`📤 WhatsApp sent to ${phone}:`, response.data);
+    console.log(`✅ WhatsApp sent to ${phone}:`, response.data);
   } catch (error) {
-    console.error(`❌ WhatsApp send error for ${phone}:`, error.response?.data || error.message);
+    console.error(
+      `❌ WhatsApp send error for ${phone}:`,
+      error.response?.data || error.message
+    );
   }
 }
 
 // ✅ Shopify Webhook Listener
-app.post("/webhook", async (req, res) => {
+app.post("/webhook", (req, res) => {
   try {
     const order = req.body;
 
-    // Extract customer details
     const customerName = order.customer?.first_name || "Customer";
-    const orderNumber = order.name || order.id;
-    const customerPhone = order.customer?.phone?.replace(/\D/g, ""); // Clean phone number
 
-    console.log(`📦 New order from ${customerName}, sending WhatsApp to ${customerPhone}`);
+    // ✅ Ensure order number is valid
+    const orderNumber = order.name
+      ? order.name.replace("#", "")
+      : order.id
+      ? `Order-${order.id}`
+      : "Unknown";
+
+    // ✅ Extract phone number from multiple places
+    let customerPhone =
+      order.customer?.phone ||
+      order.shipping_address?.phone ||
+      order.billing_address?.phone;
 
     if (customerPhone) {
-      await sendWhatsAppMessage(customerPhone, customerName, orderNumber);
-    } else {
-      console.error("❌ No customer phone number found!");
+      // Remove non-numeric characters
+      customerPhone = customerPhone.replace(/\D/g, "");
+      // ✅ Add country code if missing
+      if (!customerPhone.startsWith("91")) {
+        customerPhone = "91" + customerPhone;
+      }
     }
 
-    // ✅ Send internal notification
-    await sendWhatsAppMessage(INTERNAL_NUMBER, customerName, orderNumber);
+    console.log(
+      `📦 New order from ${customerName}, phone: ${
+        customerPhone || "Not provided"
+      }, order: ${orderNumber}`
+    );
 
-    res.status(200).send("✅ WhatsApp message sent");
+    // ✅ Respond immediately to Shopify to avoid retries
+    res.status(200).send("✅ Webhook received");
+
+    // ✅ Process WhatsApp notifications in background
+    (async () => {
+      if (customerPhone) {
+        await sendWhatsAppMessage(customerPhone, customerName, orderNumber);
+      } else {
+        console.error("❌ No customer phone number found!");
+      }
+
+      // ✅ Always send internal notification
+      await sendWhatsAppMessage(INTERNAL_NUMBER, customerName, orderNumber);
+    })();
   } catch (err) {
     console.error("❌ Webhook error:", err.message);
     res.status(500).send("Webhook processing failed");
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+// ✅ Start the server
+app.listen(PORT, () =>
+  console.log(`✅ Server running on port ${PORT}`)
+);
