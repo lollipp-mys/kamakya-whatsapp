@@ -6,16 +6,18 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-// ✅ WhatsApp API Credentials
+// ✅ WhatsApp Cloud API Credentials
 const WHATSAPP_TOKEN = "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD";
 const PHONE_NUMBER_ID = "759432643911310";
-const INTERNAL_NUMBER = "917892611778";
-const TEMPLATE_NAME = "order_confirmation";
+const INTERNAL_NUMBER = "919008055565";
+const TEMPLATE_NAME = "order_ready_notification";
+
+// ✅ Google Drive direct image link
 const IMAGE_URL = "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo";
 
 const processedOrders = new Set();
 
-// ✅ Function to send WhatsApp template message
+// ✅ Function to send WhatsApp Template Message
 async function sendWhatsAppMessage(phone, name, orderNumber) {
   if (!phone) {
     console.log("❌ No phone number provided, skipping send");
@@ -37,15 +39,23 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
           parameters: [
             {
               type: "image",
-              image: { link: IMAGE_URL }
+              image: {
+                link: IMAGE_URL
+              }
             }
           ]
         },
         {
           type: "body",
           parameters: [
-            { type: "text", text: name || "Customer" },
-            { type: "text", text: orderNumber || "N/A" }
+            {
+              type: "text",
+              text: name || "Customer"
+            },
+            {
+              type: "text",
+              text: orderNumber || "N/A"
+            }
           ]
         }
       ]
@@ -65,7 +75,7 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
   }
 }
 
-// ✅ Shopify Webhook Listener
+// ✅ Shopify Webhook Listener (for order creation)
 app.post("/webhook", (req, res) => {
   try {
     const eventType = req.header("X-Shopify-Topic");
@@ -76,7 +86,7 @@ app.post("/webhook", (req, res) => {
 
     const order = req.body;
     const customerName = order.customer?.first_name || "Customer";
-    const orderNumber = order.name?.replace("#", "") || (order.id ? `Order-${order.id}` : "Unknown");
+    const orderNumber = order.name?.replace("#", "") || `Order-${order.id}`;
 
     let customerPhone =
       order.customer?.phone ||
@@ -100,6 +110,7 @@ app.post("/webhook", (req, res) => {
         console.error("❌ No customer phone number found or order number missing!");
       }
 
+      // Also send to internal number, but only once per order
       if (orderNumber && !processedOrders.has(orderNumber)) {
         processedOrders.add(orderNumber);
         await sendWhatsAppMessage(INTERNAL_NUMBER, customerName, orderNumber);
@@ -111,7 +122,7 @@ app.post("/webhook", (req, res) => {
   }
 });
 
-// ✅ NEW ENDPOINT: Mark order as Ready for Pickup
+// ✅ NEW: Ready for Pickup Endpoint
 app.post("/ready-for-pickup", async (req, res) => {
   const { phone, name, orderNumber } = req.body;
 
@@ -130,5 +141,5 @@ app.post("/ready-for-pickup", async (req, res) => {
   return res.status(200).send("✅ Pickup notification sent");
 });
 
-// ✅ Start the server
+// ✅ Start Server
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
