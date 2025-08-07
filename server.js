@@ -33,23 +33,23 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
       name: TEMPLATE_NAME,
       language: { code: "en" },
       components: [
-        {
-          type: "header",
-          parameters: [
-            {
-              type: "image",
-              image: { link: IMAGE_URL }
-            }
-          ]
-        },
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: name || "Customer" },
-            { type: "text", text: orderNumber ? `#${orderNumber}` : "N/A" }
-          ]
-        }
-      ]
+  {
+    type: "header",
+    parameters: [
+      {
+        type: "image",
+        image: { link: IMAGE_URL }
+      }
+    ]
+  },
+  {
+    type: "body",
+    parameters: [
+      { type: "text", text: name || "Customer" },
+      { type: "text", text: orderNumber || "N/A" }  // ✅ No # here
+    ]
+  }
+]
     }
   };
 
