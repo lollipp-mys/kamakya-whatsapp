@@ -1,8 +1,16 @@
 import express from "express";
 import axios from "axios";
+import cors from "cors"; // ✅ Added CORS import
 
 const app = express();
 app.use(express.json());
+
+// ✅ Enable CORS for your Shopify frontend only
+app.use(cors({
+  origin: "https://kamakyafashion.com",
+  methods: ["POST"],
+  allowedHeaders: ["Content-Type"]
+}));
 
 const PORT = process.env.PORT || 10000;
 
@@ -39,23 +47,15 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
           parameters: [
             {
               type: "image",
-              image: {
-                link: IMAGE_URL
-              }
+              image: { link: IMAGE_URL }
             }
           ]
         },
         {
           type: "body",
           parameters: [
-            {
-              type: "text",
-              text: name || "Customer"
-            },
-            {
-              type: "text",
-              text: orderNumber || "N/A"
-            }
+            { type: "text", text: name || "Customer" },
+            { type: "text", text: orderNumber || "N/A" }
           ]
         }
       ]
@@ -91,8 +91,7 @@ app.post("/webhook", (req, res) => {
     let customerPhone =
       order.customer?.phone ||
       order.shipping_address?.phone ||
-      order.billing_address?.phone ||
-      "";
+      order.billing_address?.phone || "";
 
     customerPhone = customerPhone.replace(/\D/g, "");
     if (customerPhone && !customerPhone.startsWith("91")) {
@@ -110,7 +109,6 @@ app.post("/webhook", (req, res) => {
         console.error("❌ No customer phone number found or order number missing!");
       }
 
-      // Also send to internal number, but only once per order
       if (orderNumber && !processedOrders.has(orderNumber)) {
         processedOrders.add(orderNumber);
         await sendWhatsAppMessage(INTERNAL_NUMBER, customerName, orderNumber);
@@ -122,7 +120,7 @@ app.post("/webhook", (req, res) => {
   }
 });
 
-// ✅ NEW: Ready for Pickup Endpoint
+// ✅ Ready for Pickup Endpoint
 app.post("/ready-for-pickup", async (req, res) => {
   const { phone, name, orderNumber } = req.body;
 
