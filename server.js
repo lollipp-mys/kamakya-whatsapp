@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 10000;
 // ✅ WhatsApp API Credentials
 const WHATSAPP_TOKEN = "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD";
 const PHONE_NUMBER_ID = "759432643911310"; // WhatsApp business phone ID
-const INTERNAL_NUMBER = "918147958503"; // Internal notification number
+const INTERNAL_NUMBER = "917892611778"; // Internal notification number
 const TEMPLATE_NAME = "order_confirmation";
 const IMAGE_URL = "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo";
 
