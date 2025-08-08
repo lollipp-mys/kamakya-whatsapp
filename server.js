@@ -33,7 +33,7 @@ const IMAGE_URL =
 const processedOrders = new Set();
 
 // ✅ Function to send WhatsApp Template Message
-async function sendWhatsAppMessage(phone, name, orderNumber, templateName, includeImage = false) {
+async function sendWhatsAppMessage(phone, name, orderNumber, templateName, includeImage = false, reasonForReturn = "") {
   if (!phone) {
     console.log("❌ No phone number provided, skipping send");
     return;
@@ -79,6 +79,7 @@ async function sendWhatsAppMessage(phone, name, orderNumber, templateName, inclu
         parameters: [
           { type: "text", text: name || "Customer" },
           { type: "text", text: orderNumber || "N/A" },
+ { type: "text", text: reasonForReturn || "N/A" },  // {{3}} Reason
         ],
       },
     ];
@@ -192,7 +193,7 @@ app.post("/ready-for-pickup", async (req, res) => {
 // ✅ Return Request Form Submission Endpoint
 app.post("/return-request", async (req, res) => {
   try {
-    const { phone, name, orderNumber } = req.body;
+    const { phone, name, orderNumber, reasonForReturn } = req.body;
 
     if (!phone || !orderNumber) {
       return res.status(400).send("❌ Missing phone or order number");
