@@ -22,17 +22,18 @@ const WHATSAPP_TOKEN =
 const PHONE_NUMBER_ID = "759432643911310";
 const INTERNAL_NUMBER = "919008055565";
 
-// ✅ Use only `order_confirmation` for all notifications
-const TEMPLATE_NAME = "order_confirmation";
+// ✅ Template Names
+const TEMPLATE_ORDER_CONFIRMATION = "order_confirmation";
+const TEMPLATE_RETURN_REQUEST = "return_request";
 
-// ✅ Google Drive direct image link
+// ✅ Google Drive direct image link (for order confirmation only)
 const IMAGE_URL =
   "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo";
 
 const processedOrders = new Set();
 
 // ✅ Function to send WhatsApp Template Message
-async function sendWhatsAppMessage(phone, name, orderNumber) {
+async function sendWhatsAppMessage(phone, name, orderNumber, templateName, includeImage = false) {
   if (!phone) {
     console.log("❌ No phone number provided, skipping send");
     return;
@@ -45,28 +46,43 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
     to: phone,
     type: "template",
     template: {
-      name: TEMPLATE_NAME,
+      name: templateName,
       language: { code: "en" },
-      components: [
-        {
-          type: "header",
-          parameters: [
-            {
-              type: "image",
-              image: { link: IMAGE_URL },
-            },
-          ],
-        },
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: name || "Customer" },
-            { type: "text", text: orderNumber || "N/A" },
-          ],
-        },
-      ],
+      components: [],
     },
   };
+
+  // ✅ Add parameters based on template type
+  if (templateName === TEMPLATE_ORDER_CONFIRMATION) {
+    payload.template.components = [
+      {
+        type: "header",
+        parameters: [
+          {
+            type: "image",
+            image: { link: IMAGE_URL },
+          },
+        ],
+      },
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: name || "Customer" },
+          { type: "text", text: orderNumber || "N/A" },
+        ],
+      },
+    ];
+  } else if (templateName === TEMPLATE_RETURN_REQUEST) {
+    payload.template.components = [
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: name || "Customer" },
+          { type: "text", text: orderNumber || "N/A" },
+        ],
+      },
+    ];
+  }
 
   try {
     const response = await axios.post(url, payload, {
@@ -75,10 +91,10 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
         "Content-Type": "application/json",
       },
     });
-    console.log(`✅ WhatsApp sent to ${phone}:`, response.data);
+    console.log(`✅ WhatsApp (${templateName}) sent to ${phone}:`, response.data);
   } catch (error) {
     console.error(
-      `❌ WhatsApp send error for ${phone}:`,
+      `❌ WhatsApp send error for ${phone} (${templateName}):`,
       error.response?.data || error.message
     );
   }
@@ -119,7 +135,12 @@ app.post("/webhook", (req, res) => {
 
     (async () => {
       if (customerPhone && orderNumber) {
-        await sendWhatsAppMessage(customerPhone, customerName, orderNumber);
+        await sendWhatsAppMessage(
+          customerPhone,
+          customerName,
+          orderNumber,
+          TEMPLATE_ORDER_CONFIRMATION
+        );
       } else {
         console.error(
           "❌ No customer phone number found or order number missing!"
@@ -128,7 +149,12 @@ app.post("/webhook", (req, res) => {
 
       if (orderNumber && !processedOrders.has(orderNumber)) {
         processedOrders.add(orderNumber);
-        await sendWhatsAppMessage(INTERNAL_NUMBER, customerName, orderNumber);
+        await sendWhatsAppMessage(
+          INTERNAL_NUMBER,
+          customerName,
+          orderNumber,
+          TEMPLATE_ORDER_CONFIRMATION
+        );
       }
     })();
   } catch (err) {
@@ -153,9 +179,46 @@ app.post("/ready-for-pickup", async (req, res) => {
   console.log(
     `🚀 Marking order ready for pickup: ${orderNumber}, phone: ${formattedPhone}`
   );
-  await sendWhatsAppMessage(formattedPhone, name || "Customer", orderNumber);
+  await sendWhatsAppMessage(
+    formattedPhone,
+    name || "Customer",
+    orderNumber,
+    TEMPLATE_ORDER_CONFIRMATION
+  );
 
   return res.status(200).send("✅ Pickup notification sent");
+});
+
+// ✅ Return Request Form Submission Endpoint
+app.post("/return-request", async (req, res) => {
+  try {
+    const { phone, name, orderNumber } = req.body;
+
+    if (!phone || !orderNumber) {
+      return res.status(400).send("❌ Missing phone or order number");
+    }
+
+    let formattedPhone = phone.replace(/\D/g, "");
+    if (!formattedPhone.startsWith("91")) {
+      formattedPhone = "91" + formattedPhone;
+    }
+
+    console.log(
+      `↩️ Return request received for ${orderNumber}, phone: ${formattedPhone}`
+    );
+
+    await sendWhatsAppMessage(
+      formattedPhone,
+      name || "Customer",
+      orderNumber,
+      TEMPLATE_RETURN_REQUEST
+    );
+
+    return res.status(200).send("✅ Return request WhatsApp sent");
+  } catch (err) {
+    console.error("❌ Return request error:", err.message);
+    return res.status(500).send("Return request send failed");
+  }
 });
 
 // ✅ Start Server
