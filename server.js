@@ -1,27 +1,33 @@
 import express from "express";
 import axios from "axios";
-import cors from "cors"; // ✅ Added CORS import
+import cors from "cors";
 
 const app = express();
 app.use(express.json());
 
-// ✅ Enable CORS for your Shopify frontend only
-app.use(cors({
-  origin: "https://kamakyafashion.com",
-  methods: ["POST"],
-  allowedHeaders: ["Content-Type"]
-}));
+// ✅ Enable CORS for Shopify frontend only
+app.use(
+  cors({
+    origin: "https://kamakyafashion.com",
+    methods: ["POST"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 
 const PORT = process.env.PORT || 10000;
 
 // ✅ WhatsApp Cloud API Credentials
-const WHATSAPP_TOKEN = "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD";
+const WHATSAPP_TOKEN =
+  "EAAKXNtx5mlABPLy1FvYmUiDNlnh6wRGuSeiKHxj3RHDmuap5G2lTBVoHFFbpwMzOl8aTXAm6a2UdBu5BD86h8H0phTf2Pq9ra8ZCkDmt0fp0JAh3ABKi3mIvKJZBT6SNErwacNKGKlF2AkIaMkvEvg45Ayx4ZBQnFQTgIGR0PH7NJZCMS5z9FCd2wq2JhgZDZD";
 const PHONE_NUMBER_ID = "759432643911310";
 const INTERNAL_NUMBER = "919008055565";
-const TEMPLATE_NAME = "order_ready_notification";
+
+// ✅ Use only `order_confirmation` for all notifications
+const TEMPLATE_NAME = "order_confirmation";
 
 // ✅ Google Drive direct image link
-const IMAGE_URL = "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo";
+const IMAGE_URL =
+  "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo";
 
 const processedOrders = new Set();
 
@@ -47,31 +53,34 @@ async function sendWhatsAppMessage(phone, name, orderNumber) {
           parameters: [
             {
               type: "image",
-              image: { link: IMAGE_URL }
-            }
-          ]
+              image: { link: IMAGE_URL },
+            },
+          ],
         },
         {
           type: "body",
           parameters: [
             { type: "text", text: name || "Customer" },
-            { type: "text", text: orderNumber || "N/A" }
-          ]
-        }
-      ]
-    }
+            { type: "text", text: orderNumber || "N/A" },
+          ],
+        },
+      ],
+    },
   };
 
   try {
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     });
     console.log(`✅ WhatsApp sent to ${phone}:`, response.data);
   } catch (error) {
-    console.error(`❌ WhatsApp send error for ${phone}:`, error.response?.data || error.message);
+    console.error(
+      `❌ WhatsApp send error for ${phone}:`,
+      error.response?.data || error.message
+    );
   }
 }
 
@@ -86,19 +95,25 @@ app.post("/webhook", (req, res) => {
 
     const order = req.body;
     const customerName = order.customer?.first_name || "Customer";
-    const orderNumber = order.name?.replace("#", "") || `Order-${order.id}`;
+    const orderNumber =
+      order.name?.replace("#", "") || `Order-${order.id}`;
 
     let customerPhone =
       order.customer?.phone ||
       order.shipping_address?.phone ||
-      order.billing_address?.phone || "";
+      order.billing_address?.phone ||
+      "";
 
     customerPhone = customerPhone.replace(/\D/g, "");
     if (customerPhone && !customerPhone.startsWith("91")) {
       customerPhone = "91" + customerPhone;
     }
 
-    console.log(`📦 New order from ${customerName}, phone: ${customerPhone || "Not provided"}, order: ${orderNumber}`);
+    console.log(
+      `📦 New order from ${customerName}, phone: ${
+        customerPhone || "Not provided"
+      }, order: ${orderNumber}`
+    );
 
     res.status(200).send("✅ Webhook received");
 
@@ -106,7 +121,9 @@ app.post("/webhook", (req, res) => {
       if (customerPhone && orderNumber) {
         await sendWhatsAppMessage(customerPhone, customerName, orderNumber);
       } else {
-        console.error("❌ No customer phone number found or order number missing!");
+        console.error(
+          "❌ No customer phone number found or order number missing!"
+        );
       }
 
       if (orderNumber && !processedOrders.has(orderNumber)) {
@@ -133,11 +150,15 @@ app.post("/ready-for-pickup", async (req, res) => {
     formattedPhone = "91" + formattedPhone;
   }
 
-  console.log(`🚀 Marking order ready for pickup: ${orderNumber}, phone: ${formattedPhone}`);
+  console.log(
+    `🚀 Marking order ready for pickup: ${orderNumber}, phone: ${formattedPhone}`
+  );
   await sendWhatsAppMessage(formattedPhone, name || "Customer", orderNumber);
 
   return res.status(200).send("✅ Pickup notification sent");
 });
 
 // ✅ Start Server
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`✅ Server running on port ${PORT}`)
+);
