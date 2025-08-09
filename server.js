@@ -213,7 +213,7 @@ app.post("/return-request", async (req, res) => {
       formattedPhone,
       name || "Customer",
       orderNumber,
-      TEMPLATE_RETURN_REQUEST
+      TEMPLATE_RETURN_REQUEST,
       false, // includeImage (not needed here)
       reasonForReturn || "N/A"
     );
