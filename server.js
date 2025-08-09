@@ -10,7 +10,7 @@ app.use(
   cors({
     origin: "https://kamakyafashion.com",
     methods: ["POST"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Accept"],
   })
 );
 
@@ -313,7 +313,8 @@ app.post("/return-request-with-file", upload.single("Return_File"), async (req, 
 
     await transporter.sendMail(mailOptions);
 
-    return res.status(200).json({ message: "✅ Return request processed" });
+    return res.status(200).json({ success: true, message: "✅ Return request processed" });
+
 
   } catch (err) {
     console.error("❌ return-request-with-file error:", err.message);
