@@ -248,6 +248,80 @@ app.post("/return-request", async (req, res) => {
   }
 });
 
+// 📦 Add at top with other imports
+import multer from "multer";
+import nodemailer from "nodemailer";
+
+// Multer storage (store in memory for email attach)
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// 📩 Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER, // Your email
+    pass: process.env.GMAIL_PASS, // Use App Password, not your Gmail password
+  },
+});
+
+// ✅ New Endpoint for return form with file
+app.post("/return-request-with-file", upload.single("Return_File"), async (req, res) => {
+  try {
+    const { Name, Email, Order_Number, WhatsApp_Number, Reason } = req.body;
+    const file = req.file;
+
+    if (!WhatsApp_Number || !Order_Number) {
+      return res.status(400).send("❌ Missing phone or order number");
+    }
+
+    let formattedPhone = WhatsApp_Number.replace(/\D/g, "");
+    if (!formattedPhone.startsWith("91")) {
+      formattedPhone = "91" + formattedPhone;
+    }
+
+    console.log(`📩 Return request with file from ${Name}, order ${Order_Number}, reason: ${Reason}`);
+
+    // ✅ Send WhatsApp as before
+    await sendWhatsAppMessage(
+      formattedPhone,
+      Name || "Customer",
+      Order_Number,
+      TEMPLATE_RETURN_REQUEST,
+      false,
+      Reason || "N/A"
+    );
+
+    // ✅ Send email to store with attachment
+    const mailOptions = {
+      from: `"Kamakya Returns" <kamakyamysore@gmail.com>`,
+      to: "kamakyamysore@gmail.com", // Store email
+      subject: `New Return Request - ${Order_Number}`,
+      html: `
+        <h3>Return Request Details</h3>
+        <p><b>Name:</b> ${Name}</p>
+        <p><b>Email:</b> ${Email}</p>
+        <p><b>Order Number:</b> ${Order_Number}</p>
+        <p><b>WhatsApp Number:</b> ${WhatsApp_Number}</p>
+        <p><b>Reason:</b> ${Reason}</p>
+      `,
+      attachments: file ? [{
+        filename: file.originalname,
+        content: file.buffer
+      }] : []
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.status(200).json({ message: "✅ Return request processed" });
+
+  } catch (err) {
+    console.error("❌ return-request-with-file error:", err.message);
+    return res.status(500).send("Return request with file failed");
+  }
+});
+
+
 // ✅ Start Server
 app.listen(PORT, () =>
   console.log(`✅ Server running on port ${PORT}`)
