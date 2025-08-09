@@ -214,8 +214,8 @@ app.post("/return-request", async (req, res) => {
       name || "Customer",
       orderNumber,
       TEMPLATE_RETURN_REQUEST
-      false, // includeImage
-      reasonForReturn // ✅ Fix: now sending actual reason
+      false, // includeImage (not needed here)
+      reasonForReturn || "N/A"
     );
 
     return res.status(200).send("✅ Return request WhatsApp sent");
