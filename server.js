@@ -25,6 +25,7 @@ const INTERNAL_NUMBER = "919008055565";
 // ✅ Template Names
 const TEMPLATE_ORDER_CONFIRMATION = "order_confirmation";
 const TEMPLATE_RETURN_REQUEST = "return_request";
+const TEMPLATE_ORDER_READY = "order_ready_notification"; // ✅ Added this
 
 // ✅ Google Drive direct image link (for order confirmation only)
 const IMAGE_URL =
@@ -184,7 +185,7 @@ app.post("/ready-for-pickup", async (req, res) => {
     formattedPhone,
     name || "Customer",
     orderNumber,
-    TEMPLATE_ORDER_CONFIRMATION
+    TEMPLATE_ORDER_READY // ✅ Use correct template
   );
 
   return res.status(200).send("✅ Pickup notification sent");
@@ -205,7 +206,7 @@ app.post("/return-request", async (req, res) => {
     }
 
     console.log(
-      `↩️ Return request received for ${orderNumber}, phone: ${formattedPhone}`
+      `↩️ Return request received for ${orderNumber}, phone: ${formattedPhone}, reason: ${reasonForReturn}`
     );
 
     await sendWhatsAppMessage(
@@ -213,6 +214,8 @@ app.post("/return-request", async (req, res) => {
       name || "Customer",
       orderNumber,
       TEMPLATE_RETURN_REQUEST
+      false, // includeImage
+      reasonForReturn // ✅ Fix: now sending actual reason
     );
 
     return res.status(200).send("✅ Return request WhatsApp sent");
