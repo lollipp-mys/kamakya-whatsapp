@@ -84,6 +84,26 @@ async function sendWhatsAppMessage(phone, name, orderNumber, templateName, inclu
         ],
       },
     ];
+} else if (templateName === TEMPLATE_ORDER_READY) { // ✅ Add this block
+  payload.template.components = [
+    {
+      type: "header",
+      parameters: [
+        {
+          type: "image",
+          image: { link: "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo" }, // Kamakya logo
+        },
+      ],
+    },
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: name || "Customer" },
+        { type: "text", text: orderNumber || "N/A" },
+      ],
+    },
+  ];
+}
   }
 
   try {
