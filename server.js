@@ -53,7 +53,7 @@ async function sendWhatsAppMessage(phone, name, orderNumber, templateName, inclu
     },
   };
 
-  // ✅ Add parameters based on template type
+  // ✅ Order Confirmation
   if (templateName === TEMPLATE_ORDER_CONFIRMATION) {
     payload.template.components = [
       {
@@ -73,6 +73,8 @@ async function sendWhatsAppMessage(phone, name, orderNumber, templateName, inclu
         ],
       },
     ];
+
+  // ✅ Return Request
   } else if (templateName === TEMPLATE_RETURN_REQUEST) {
     payload.template.components = [
       {
@@ -80,30 +82,31 @@ async function sendWhatsAppMessage(phone, name, orderNumber, templateName, inclu
         parameters: [
           { type: "text", text: name || "Customer" },
           { type: "text", text: orderNumber || "N/A" },
- { type: "text", text: reasonForReturn || "N/A" },  // {{3}} Reason
+          { type: "text", text: reasonForReturn || "N/A" }, // Reason fix
         ],
       },
     ];
-} else if (templateName === TEMPLATE_ORDER_READY) { // ✅ Add this block
-  payload.template.components = [
-    {
-      type: "header",
-      parameters: [
-        {
-          type: "image",
-          image: { link: "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo" }, // Kamakya logo
-        },
-      ],
-    },
-    {
-      type: "body",
-      parameters: [
-        { type: "text", text: name || "Customer" },
-        { type: "text", text: orderNumber || "N/A" },
-      ],
-    },
-  ];
-}
+
+  // ✅ Order Ready Notification
+  } else if (templateName === TEMPLATE_ORDER_READY) {
+    payload.template.components = [
+      {
+        type: "header",
+        parameters: [
+          {
+            type: "image",
+            image: { link: "https://drive.google.com/uc?export=view&id=1WcIbfgOZS9yVhDyiZWpjArILmmRBF4vo" },
+          },
+        ],
+      },
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: name || "Customer" },
+          { type: "text", text: orderNumber || "N/A" },
+        ],
+      },
+    ];
   }
 
   try {
